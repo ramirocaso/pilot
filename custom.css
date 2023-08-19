@@ -1,0 +1,27 @@
+/* custom.css */
+body {
+  font-family: Arial, sans-serif;
+}
+
+h1, h2, h3 {
+  color: #333333;
+}
+
+code {
+  background-color: #f5f5f5;
+}
+
+table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+th, td {
+  border: 1px solid #dddddd;
+  text-align: left;
+  padding: 8px;
+}
+
+th {
+  background-color: #f2f2f2;
+}

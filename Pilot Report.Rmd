@@ -1,0 +1,389 @@
+---
+title: "Pilot Study Results"
+author: "Ramiro Casó - Rotterdam School of Management"
+date: "`r Sys.Date()`"
+output:
+  html_document:
+    css: custom.css
+    theme: journal
+    toc: true
+    toc_float: true
+    number_sections: true
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(
+	echo = FALSE,
+	message = FALSE,
+	warning = FALSE
+)
+options(knitr.table.format = "html")
+```
+
+
+```{r libraries}
+library(kableExtra)
+library(knitr)
+library(tidyverse) # Includes ggplot2, dplyr, and other data manipulation libraries
+library(readr)
+library(rstatix)
+library(ggpubr)
+
+```
+
+
+# Intro
+
+Hello Bram, Steven, how are you? 
+
+This is a brief report I'm putting together to share with you the result of the experiment/pilot. 
+
+I'm first going to present descriptives and then will show you the analysis I've done. 
+
+```{r loading the data}
+exp_data <- read_csv("study2b_total.csv")
+exp_data[, c(46, 51, 56)] <- lapply(exp_data[, c(46, 51, 56)], as.factor)
+
+```
+
+First, we need to clean the data, that is, remove participants who either took too long or went too fast through the survey. 
+
+Here is a histogram of `duration_min` along with the summary statistics. 
+As it can be observed, there are a few observations that answer in less than 5 minutes and some that took almost 40 min. 
+
+
+```{r cleaning}
+
+ggplot(exp_data, aes(x = duration_min)) +
+  geom_histogram(binwidth = 2, fill = "blue", alpha = 0.7) +
+  labs(title = "Duration in Min",
+       x = "Duration (Minutes)",
+       y = "Frequency") +
+  theme_minimal()
+
+# Calculate the summary statistics
+duration_summary <- summary(exp_data$duration_min)
+
+# Create a data frame to hold the summary
+summary_df <- data.frame(
+  Statistic = c("Minimum", "1st Quartile", "Median", "Mean", "3rd Quartile", "Maximum"),
+  Value = c(duration_summary[1], duration_summary[2], duration_summary[3], mean(exp_data$duration_min), duration_summary[5], duration_summary[6])
+)
+
+# Round the values to 2 decimal points
+summary_df$Value <- round(summary_df$Value, 2)
+
+kable(summary_df, format = "html", caption = "Summary of Duration (Minutes)", align = c("c", "c"), row.names = FALSE)
+
+
+```
+
+
+---
+
+My idea is to trim this data so that I only keep those above the 10th percentile and below the 95 percentile. 
+
+Here are the resulting histogram and descriptives of `duration_min`.
+
+
+```{r triming}
+
+
+# Calculate the 5th and 95th percentiles of duration_min
+#lower_bound <- quantile(exp_data$duration_min, 0.10)
+#upper_bound <- quantile(exp_data$duration_min, 0.90)
+
+lower_bound <- 5  # Lower bound set to 5 minutes
+upper_bound <- 30 # Upper bound set to 20 minutes
+
+
+# Filter the data to retain only observations between the 5th and 95th percentiles
+exp_data_t <- exp_data[exp_data$duration_min > lower_bound & exp_data$duration_min < upper_bound, ]
+
+ggplot(exp_data_t, aes(x = duration_min)) +
+  geom_histogram(binwidth = 2, fill = "blue", alpha = 0.7) +
+  labs(title = "Duration in Min",
+       x = "Duration (Minutes)",
+       y = "Frequency") +
+  theme_minimal()
+
+# Calculate the summary statistics
+duration_summary <- summary(exp_data_t$duration_min)
+
+# Create a data frame to hold the summary
+summary_df <- data.frame(
+  Statistic = c("Minimum", "1st Quartile", "Median", "Mean", "3rd Quartile", "Maximum"),
+  Value = c(duration_summary[1], duration_summary[2], duration_summary[3], mean(exp_data_t$duration_min), duration_summary[5], duration_summary[6])
+)
+
+# Round the values to 2 decimal points
+summary_df$Value <- round(summary_df$Value, 2)
+
+kable(summary_df, format = "html", caption = "Summary of Duration (Minutes)", align = c("c", "c"), row.names = FALSE)
+
+
+
+```
+
+
+# Descriptives
+
+Here is a table with the mean, standard deviation, and \( n \). For clarity, these are the names of the variables.
+
+- `text_type`: The main independent variable indicating the type of text that was presented, which has three levels: `met_a`= metaphor apt; `met_na= non-apt metaphor; and `literal` = control condition.  
+- `ave_sk_t1`: Mean Subjective Knowledge before presenting the Text (Time 1).
+- `ave_sk_t2`: Mean Subjective Knowledge after presenting the Text (Time 2).
+- `ave_sk_t3`: Mean Subjective Knowledge after presenting the Objective Knowledge Scale (Time 3).
+- `ave_wta`: Average of the Willingness to Adopt scale. 
+- `total_ok`: Results of Objective Knowledge Scale calculated by adding the correct answers. 
+- `duration_min`: Average time it took to complete the survey in minutes. 
+
+```{r descriptives}
+
+# Compute means and standard errors
+
+variables <- c("ave_sk_t1", "ave_sk_t2", "ave_sk_t3","total_ok","ave_wta", "duration_min")
+
+data_summary <- exp_data_t %>%
+  gather(variable, value, all_of(variables)) %>% # Using all_of for variable selection
+  group_by(variable) %>% # Grouping by variable only
+  summarise(
+    mean = mean(value, na.rm = TRUE),
+    se = sd(value, na.rm = TRUE) / sqrt(n()),
+    p10 = quantile(value, 0.10, na.rm = TRUE), # 10th percentile
+    p25 = quantile(value, 0.25, na.rm = TRUE), # 25th percentile
+    p50 = quantile(value, 0.50, na.rm = TRUE), # 50th percentile (median)
+    p75 = quantile(value, 0.75, na.rm = TRUE), # 75th percentile
+    n = n()
+  )
+
+
+data_summary_grouped <- exp_data_t %>%
+  gather(variable, value, all_of(variables)) %>% # Using all_of for variable selection
+  group_by(text_type, variable) %>%
+  summarise(
+    mean = mean(value, na.rm = TRUE),
+    se = sd(value, na.rm = TRUE) / sqrt(n()),
+    p10 = quantile(value, 0.10, na.rm = TRUE), # 10th percentile
+    p25 = quantile(value, 0.25, na.rm = TRUE), # 25th percentile
+    p50 = quantile(value, 0.50, na.rm = TRUE), # 50th percentile (median)
+    p75 = quantile(value, 0.75, na.rm = TRUE), # 75th percentile
+    n = n()
+  )
+
+## First table
+
+data_summary %>%
+  kable(format = "html", digits = 2, align = 'c', caption = "Summary Statistics for All Variables") %>%
+  kable_styling(full_width = FALSE)
+
+# Creating a table for data_summary_grouped
+data_summary_grouped %>%
+  kable(format = "html", digits = 2, align = 'c', caption = "Summary Statistics for Groped Variables") %>%
+  kable_styling(full_width = FALSE)
+
+
+```
+
+
+---
+
+# Subjective Knowledge
+
+Now that I have cleaned the data, let's analyze it, starting with the subjective knowledge scale. 
+
+Again, for clarity, keep in mind that: 
+
+- `ave_sk_t1`: Mean Subjective Knowledge before presenting the Text (Time 1).
+- `ave_sk_t2`: Mean Subjective Knowledge after presenting the Text (Time 2).
+- `ave_sk_t3`: Mean Subjective Knowledge after presenting the Objective Knowledge Scale (Time 3).
+
+First, let's run an a simple Repeated measured ANOVA
+
+## SK ANOVA's
+
+```{r sk}
+
+sk_df <- exp_data_t %>%
+  select(ResponseId, ave_sk_t1, ave_sk_t2, ave_sk_t3, text_type, pilot) %>%
+  pivot_longer(
+    cols = c(ave_sk_t1, ave_sk_t2, ave_sk_t3),
+    names_to = "sk_time",
+    values_to = "ave_sk"
+  )
+```
+
+```{r sk ANOVA}
+
+
+# Conduct the repeated measures ANOVA
+anova_sk <- aov(ave_sk ~ sk_time + pilot + Error(ResponseId/sk_time), data = sk_df)
+
+# Print the summary
+summary(anova_sk)
+
+# Calculate the means and standard errors
+sk_summary <- sk_df %>%
+  group_by(sk_time) %>%
+  summarise(
+    n_obs = n(),
+    mean_ave_sk = mean(ave_sk, na.rm = TRUE),
+    se_ave_sk = sd(ave_sk, na.rm = TRUE) / sqrt(n()),
+    .groups = "drop" # This line avoids a warning message
+  )
+
+# Formatting the table with kable and kableExtra
+sk_summary %>%
+  kable("html") %>%
+  kable_styling("striped", full_width = FALSE) %>%
+  add_header_above(c("Time Point" = 1, "Number of Observations" = 1, "Subjective Knowledge" = 2)) %>%
+  column_spec(2:3, bold = TRUE, color = "blue")
+
+
+# Create the plot
+ggplot(sk_summary, aes(x=sk_time, y=mean_ave_sk, group=1)) +
+  geom_line(color="blue") + # Line connecting the points
+  geom_point(size=3, color="red") + # Points for the means
+  geom_errorbar(aes(ymin=mean_ave_sk - se_ave_sk, ymax=mean_ave_sk + se_ave_sk), width=0.2) + # Error bars
+  labs(
+    title="Effect of SK Time on Average SK",
+    x="SK Time",
+    y="Average SK"
+  ) +
+  ylim(1, 7) + # Set the limits of the Y-axis
+  theme_minimal()
+
+
+```
+
+
+---
+Here are the results for a mixed two-way ANOVA
+
+```{r sk mixed anova}
+
+# Load the necessary libraries
+library(nlme)
+library(car) # For Type III SS
+
+# Ensure that sk_time and text_type are factors
+sk_df$sk_time <- factor(sk_df$sk_time)
+sk_df$text_type <- factor(sk_df$text_type)
+sk_df <- na.omit(sk_df)
+
+
+# Fit the model with sk_time as a within-subjects factor, text_type as a between-subjects factor, and a random intercept for each subject
+#model <- lme(ave_sk ~ text_type * sk_time, random = ~1 | ResponseId, data = sk_df)
+model <- lme(ave_sk ~ text_type * sk_time + pilot, random = ~1 | ResponseId, data = sk_df)
+
+
+# Use the Anova function from the car package to get Type III SS
+mix_anova_sk <- Anova(model, type = "III")
+
+# Print the result
+print(mix_anova_sk)
+
+```
+
+
+```{r sk mixed anova visualization}
+# Calculate the means and standard errors for each combination of text_type and sk_time
+
+sk_summary <- sk_df %>%
+  group_by(text_type, sk_time) %>%
+  summarise(
+    n_obs = n(),
+    mean_ave_sk = mean(ave_sk, na.rm = TRUE),
+    se_ave_sk = sd(ave_sk, na.rm = TRUE) / sqrt(n()),
+    .groups = "drop"
+  )
+
+# Formatting the table with kable and kableExtra
+sk_summary %>%
+  kable("html") %>%
+  kable_styling("striped", full_width = FALSE) %>%
+  add_header_above(c(" " = 2, "Subjective Knowledge" = 3)) %>% # Corrected the number of columns
+  column_spec(3:5, bold = TRUE, color = "blue") # Adjusted the column range
+
+
+
+# Create the plot
+ggplot(sk_summary, aes(x=sk_time, y=mean_ave_sk, group=text_type, color=text_type)) +
+  geom_line(size=1) + # Lines connecting the points
+  geom_point(size=3) + # Points for the means
+  geom_errorbar(aes(ymin=mean_ave_sk - se_ave_sk, ymax=mean_ave_sk + se_ave_sk), width=0.2) + # Error bars
+  labs(
+    title="Effect of SK Time and Text Type on Average SK",
+    x="SK Time",
+    y="Average SK"
+  ) +
+  ylim(1, 7) + # Set the limits of the Y-axis
+  theme_minimal() +
+  scale_color_brewer(palette="Set1") # Use a color palette for the different text types
+```
+
+# Objective Knowledge
+
+```{r OK data frames and summary}
+
+ok_df <- exp_data_t %>%
+  select(ResponseId, total_ok, text_type, wta_moment, pilot)
+
+ok_df <- na.omit(ok_df) # Remove missing values
+
+ok_summary <- ok_df %>%
+  group_by(text_type, wta_moment) %>%
+  summarise(
+    n_obs = n(),
+    mean_total_ok = mean(total_ok, na.rm = TRUE),
+    se_total_ok = sd(total_ok, na.rm = TRUE) / sqrt(n()),
+    .groups = "drop"
+  )
+
+ok_summary %>%
+  kable("html") %>%
+  kable_styling("striped", full_width = F) %>%
+  add_header_above(c("Summary Statistics" = 5), font_size = 15) %>%
+  column_spec(1, bold = T, color = "blue") %>%
+  column_spec(2, italic = T)
+
+```
+
+## Two-way Anova for OK
+
+```{r}
+# Run the two-way ANOVA
+anova_ok <- aov(total_ok ~ text_type * wta_moment + pilot, data = ok_df)
+
+#anova_ok2 <- aov(total_ok ~ text_type * pilot, data = ok_df)
+
+summary(anova_ok)
+
+#summary(anova_ok2)
+
+# Print the summary of the ANOVA
+summary(anova_ok)
+
+# Compute the means and standard errors for each combination of text_type and wta_moment
+ok_summary <- ok_df %>%
+  group_by(text_type, wta_moment) %>%
+  summarise(
+    n_obs = n(),
+    mean_total_ok = mean(total_ok, na.rm = TRUE),
+    se_total_ok = sd(total_ok, na.rm = TRUE) / sqrt(n()),
+    .groups = "drop"
+  )
+
+# Now we can create a ggplot with both independent variables
+ggplot(ok_summary, aes(x = text_type, y = mean_total_ok, group = wta_moment, color = wta_moment)) +
+  geom_line() +
+  geom_errorbar(aes(ymin = mean_total_ok - se_total_ok, ymax = mean_total_ok + se_total_ok), width = 0.2) +
+  labs(title = "Interaction between Text Type and WTA Moment",
+       x = "Text Type",
+       y = "Mean Total OK",
+       color = "WTA Moment") +
+  ylim(1,9) +
+  theme_minimal()
+```
+
+
