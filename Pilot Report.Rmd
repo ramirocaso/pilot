@@ -36,19 +36,26 @@ library(ggpubr)
 
 Hello Bram, Steven, how are you? 
 
-This is a brief report I'm putting together to share with you the result of the experiment/pilot. 
+This is the final report of the current pilot. I think we are going to need to find a new set of stimuli, because results are not promising, even after collecting the second batch (the one without the visual aid)
 
-I'm first going to present descriptives and then will show you the analysis I've done. 
+I'm going to present the analysis in this HTML, which I hope doesn't become to long. We can discuss it further in our next meeting. 
+
+---
+
 
 ```{r loading the data}
 exp_data <- read_csv("study2b_total.csv")
 exp_data[, c(46, 51, 56)] <- lapply(exp_data[, c(46, 51, 56)], as.factor)
-
 ```
 
-First, we need to clean the data, that is, remove participants who either took too long or went too fast through the survey. 
+# Data Cleaning
+
+First, and just like you suggested, I'm using the two batches together and included a new variable called `pilot` which differentiates the first batch (pilot_a = with visual aid) from the second batch (pilot_b = without visual aid)
+
+Second, I'm removing participants that either answer to fast (below 5 minutes) or took too long (above 20 minutes). 
 
 Here is a histogram of `duration_min` along with the summary statistics. 
+
 As it can be observed, there are a few observations that answer in less than 5 minutes and some that took almost 40 min. 
 
 
@@ -98,7 +105,9 @@ upper_bound <- 30 # Upper bound set to 20 minutes
 
 
 # Filter the data to retain only observations between the 5th and 95th percentiles
-exp_data_t <- exp_data[exp_data$duration_min > lower_bound & exp_data$duration_min < upper_bound, ]
+#exp_data_t <- exp_data[exp_data$duration_min > lower_bound & exp_data$duration_min < upper_bound, ]
+
+exp_data_t <- exp_data[exp_data$duration_min > lower_bound & exp_data$duration_min < upper_bound & exp_data$pilot == "pilot_b", ]
 
 ggplot(exp_data_t, aes(x = duration_min)) +
   geom_histogram(binwidth = 2, fill = "blue", alpha = 0.7) +
@@ -217,7 +226,10 @@ sk_df <- exp_data_t %>%
 
 
 # Conduct the repeated measures ANOVA
-anova_sk <- aov(ave_sk ~ sk_time + pilot + Error(ResponseId/sk_time), data = sk_df)
+#anova_sk <- aov(ave_sk ~ sk_time + pilot + Error(ResponseId/sk_time), data = sk_df)
+
+anova_sk <- aov(ave_sk ~ sk_time + Error(ResponseId/sk_time), data = sk_df)
+
 
 # Print the summary
 summary(anova_sk)
@@ -273,8 +285,11 @@ sk_df <- na.omit(sk_df)
 
 
 # Fit the model with sk_time as a within-subjects factor, text_type as a between-subjects factor, and a random intercept for each subject
-#model <- lme(ave_sk ~ text_type * sk_time, random = ~1 | ResponseId, data = sk_df)
-model <- lme(ave_sk ~ text_type * sk_time + pilot, random = ~1 | ResponseId, data = sk_df)
+
+model <- lme(ave_sk ~ text_type * sk_time, random = ~1 | ResponseId, data = sk_df)
+
+#model <- lme(ave_sk ~ text_type * sk_time + pilot, random = ~1 | ResponseId, data = sk_df)
+
 
 
 # Use the Anova function from the car package to get Type III SS
@@ -309,8 +324,8 @@ sk_summary %>%
 
 # Create the plot
 ggplot(sk_summary, aes(x=sk_time, y=mean_ave_sk, group=text_type, color=text_type)) +
-  geom_line(size=1) + # Lines connecting the points
-  geom_point(size=3) + # Points for the means
+  geom_line(linewidth=1) + # Lines connecting the points
+  geom_point(linewidth=3) + # Points for the means
   geom_errorbar(aes(ymin=mean_ave_sk - se_ave_sk, ymax=mean_ave_sk + se_ave_sk), width=0.2) + # Error bars
   labs(
     title="Effect of SK Time and Text Type on Average SK",
@@ -353,11 +368,9 @@ ok_summary %>%
 
 ```{r}
 # Run the two-way ANOVA
-anova_ok <- aov(total_ok ~ text_type * wta_moment + pilot, data = ok_df)
+anova_ok <- aov(total_ok ~ text_type * wta_moment, data = ok_df)
 
-#anova_ok2 <- aov(total_ok ~ text_type * pilot, data = ok_df)
-
-summary(anova_ok)
+#anova_ok <- aov(total_ok ~ text_type * pilot, data = ok_df)
 
 #summary(anova_ok2)
 
@@ -386,4 +399,56 @@ ggplot(ok_summary, aes(x = text_type, y = mean_total_ok, group = wta_moment, col
   theme_minimal()
 ```
 
+
+# WTA
+
+```{r wta summary}
+wta_df <- exp_data_t %>%
+  select(ResponseId, total_ok, text_type, wta_moment, ave_wta, ave_sk_t1, ave_sk_t2, ave_sk_t3)
+
+wta_df <- na.omit(wta_df)
+
+wta_summary <- wta_df %>%
+  group_by(text_type, wta_moment) %>%
+  summarise(
+    n_obs = n(), # Number of observations per group
+    mean_wta_ok = mean(ave_wta, na.rm = TRUE),
+    se_wta_ok = sd(ave_wta, na.rm = TRUE) / sqrt(n()),
+    .groups = "drop"
+  )
+
+wta_summary %>%
+  kable("html") %>%
+  kable_styling("striped", full_width = F) %>%
+  add_header_above(c("Summary Statistics" = 5), font_size = 15) %>%
+  column_spec(1, bold = T, color = "blue") %>%
+  column_spec(2, italic = T)
+
+```
+
+```{r wta ANOVA}
+# Run the two-way ANOVA
+anova_wta <- aov(ave_wta ~ text_type * wta_moment, data = wta_df)
+
+# Print the summary of the ANOVA
+summary(anova_wta)
+
+
+library(ggplot2)
+library(dplyr)
+
+
+# Create the line plot with y-axis limits set from 0 to 10, and add standard error bars
+ggplot(wta_summary, aes(x = text_type, y = mean_wta_ok, color = wta_moment, group = wta_moment)) +
+  geom_line() +
+  geom_point() +
+  geom_errorbar(aes(ymin = mean_wta_ok - se_wta_ok, ymax = mean_wta_ok + se_wta_ok), width = 0.2) +
+  labs(title = "Interaction Plot",
+       subtitle = "Effects of text_type and wta_moment on ave_wpa",
+       x = "Text Type",
+       y = "Mean of WTA",
+       color = "WTA Moment") +
+  ylim(0, 5) +  # Set y-axis limits
+  theme_minimal()
+```
 
