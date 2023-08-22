@@ -142,7 +142,7 @@ The new minimum duration is `r round(min(exp_data_t$duration_min), 2)`
 
 The new maximum duration is `r round(max(exp_data_t$duration_min), 2)`
 
-This reduces the data set to a total of `r nrow(exp_data)` observations. 
+This reduces the data set to a total of `r nrow(exp_data_t)` observations. 
 
 ---
 
@@ -549,7 +549,7 @@ ggplot(means_se, aes(x = text_type, y = mean_delta, group = 1)) +
 
 ### ANOVA for av_sk_t2 controlling for av_sk_t1
 
-Lastly, I want to see if there are differences in the average subjective knowledge reported in Time 2 (after the experimental stimui was presented) controlling for the score of av_sk_t1 and pilot. 
+Lastly, I want to see if there are differences in the average subjective knowledge reported in Time 2 (after the experimental stimuli was presented) controlling for the score of av_sk_t1 and pilot. 
 
 ```{r sk controlling, fig.align='center'}
 # Fit the ANCOVA model
@@ -591,6 +591,9 @@ for (pilot_level in unique(sk_df3$pilot)) {
 }
 
 ```
+
+---
+
 As you can see, The coefficients for the `text_type` factor levels "met_a" and "met_na" are 0.0983 and -0.0230, respectively. Neither of these coefficients is statistically significant (p > 0.05)
 so there is no evidence of a difference in `ave_sk_t2` across the `text_type` levels, after controlling for `ave_sk_t1` and `pilot`.
 
@@ -603,18 +606,18 @@ Finally, `ave_sk_t1` has a coefficient of 0.4230 which is highly significant (p 
 
 # Discussion of SK Scale. 
 
-As I said before, I believe that the stimuli is not working as predicted. 
-Presenting participants with explanatory text. regardless of the type of text, seems to increase participant's perceive understanding of how metabolism work. 
+As I said before, I believe the stimuli are not working as predicted. 
+Presenting participants with explanatory text, regardless of the type of text, seems to increase participants' perceived understanding of how metabolism work. 
 
 When you think about it, this makes sense. 
 
-Participants have no reason to feel their SK threatened in any way, because their knowledge has not been tested yet. They probably think they now know more, since they have just acquired additional information. This effect is shown in the significant differences of SK between T1 and T2. Also, and perhaps more importantly, the difference between T2 and T3 is also significant, but in the opposite direction, meaning that after participants were asked to answer the Objective Knowledge Scale their perceived understanding suffered. 
+Participants have no reason to feel their SK threatened in any way because their knowledge has not been tested yet. They probably think they know more since they have just acquired additional information. This effect is shown in the significant differences in SK between T1 and T2. Also, and perhaps more importantly, the difference between T2 and T3 is also significant, but in the opposite direction, meaning that after participants were asked to answer the Objective Knowledge Scale, their perceived understanding suffered. 
 
-Finally, when the information is presented as an extended apt metaphor it appears to have a greater effect on SK than when it is presented with a non-apt extended metaphor. This effect is very mild, but it could indicate that apt metaphors are better at increasing SK relative to non-apt metaphors. 
+Finally, when the information is presented as an extended apt metaphor, it appears to have a more significant effect on SK than when presented with a non-apt extended metaphor. This effect is mild, but it could indicate that apt metaphors are better at increasing SK than non-apt metaphors.
 
 # What to do next?
 
-I believe we need to find a better way to shatter the illusion of knowing. Instead of using a Objective Knowledge scale, we could ask participants to explain, in their own words, what they've just read. Doing so will probably be difficult, specially for the literal condition. Therefore, we could expect a higher drop of SK from T2 to T3 in the literal and non-apt metaphors conditions. 
+I believe we need to find a better way to shatter the illusion of knowing. Instead of using an Objective Knowledge scale, we could ask participants to explain, in their own words, what they've just read. Doing so will probably be difficult, especially for the literal condition. Therefore, we could expect a higher drop of SK from T2 to T3 in the literal and non-apt metaphors conditions. 
 
 
 
