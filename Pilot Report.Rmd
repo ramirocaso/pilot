@@ -37,9 +37,36 @@ library(RColorBrewer)
 
 Hello Bram, Steven, how are you?
 
-This is the final report of the current pilot. I think we are going to need to find a new set of stimuli because results are not promising, even after collecting the second batch (the one without the visual aid)
+I've just wrapped up the analysis on the subjective knowledge scale, and I'm eager to share some intriguing findings with you.
 
-I'm going to present the analysis in this HTML, which I hope doesn't become too long. We can discuss it further in our next meeting.
+**The Analysis:**
+
+In line with our last meeting, I've implemented the controls you suggested, such as subtracting the values for Time 1 (T1) and using them as a control variable. I also combined both batches of participants—with and without visual aid—and incorporated them as another control variable.
+
+**Main Findings:**
+
+Here's the main finding so far:
+
+- Understanding of Metabolism: Regardless of the text type, participants seemed to feel they understood metabolism better after reading explanatory text. This is seen in the rise in perceived understanding from T1 to T2 then its reversal after objective knowledge testing at T3.
+- Metaphors Matter: An extended apt metaphor seemed to have a slight but noticeable effect compared to a non-apt metaphor. This could indicate that metaphors enhance subjective knowledge, and the aptness of the metaphor might further amplify this effect.
+
+**Thoughts and Recommendations:**
+
+I think our Objective Knowledge measure might need a revamp. While it did have a moderate effect, I feel it didn't quite shatter the illusion of knowing as we hope it would. Perhaps asking participants to explain what they just read could yield a stronger effect, similar to what Fernbach does in his studies. If apt metaphors indeed increase subjective knowledge, participants in that condition may resist this illusion-shattering more robustly.
+
+I hope these insights make sense. Obviously,your thoughts and suggestions on the analysis below are more than welcome! 
+
+**Moving Forward:**
+
+I'll continue to analyse the remaining variables, but I wanted to get this to you quickly, as we might still have time to gather new data.
+
+That's all for now. I'm looking forward to hearing your thoughts.
+
+¡Saludos!
+
+Ramiro
+
+**p.s:** You probably already noticed it, but the menu in the top left side of the page helps you navigate through the report. It seemed like a lot of work to make the report, but it wasn't, and I believe it could be a better way to share results with you hereafter. So also, let me know what you think about this "new method" of reporting ;)  
 
 ------------------------------------------------------------------------
 
