@@ -37,7 +37,7 @@ library(RColorBrewer)
 
 Hello Bram, Steven, how are you?
 
-I've just wrapped up the analysis on the subjective knowledge scale, and I'm eager to share some intriguing findings with you.
+I've just wrapped up the analysis on the subjective knowledge scale, and I wanted to share something that I think might be interesting. At the end of this report are the details, but as an intro, here is a summary: 
 
 **The Analysis:**
 
