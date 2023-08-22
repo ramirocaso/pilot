@@ -11,7 +11,7 @@ output:
     number_sections: true
 ---
 
-```{r setup, include=FALSE}
+```{r setup, include=FALSE, fig.align='center'}
 knitr::opts_chunk$set(
 	echo = FALSE,
 	message = FALSE,
@@ -20,7 +20,6 @@ knitr::opts_chunk$set(
 options(knitr.table.format = "html")
 ```
 
-
 ```{r libraries}
 library(kableExtra)
 library(knitr)
@@ -28,20 +27,21 @@ library(tidyverse) # Includes ggplot2, dplyr, and other data manipulation librar
 library(readr)
 library(rstatix)
 library(ggpubr)
-
+library(emmeans)
+library(lmtest)
+library(tidyr)
+library(RColorBrewer)
 ```
-
 
 # Intro
 
-Hello Bram, Steven, how are you? 
+Hello Bram, Steven, how are you?
 
-This is the final report of the current pilot. I think we are going to need to find a new set of stimuli, because results are not promising, even after collecting the second batch (the one without the visual aid)
+This is the final report of the current pilot. I think we are going to need to find a new set of stimuli because results are not promising, even after collecting the second batch (the one without the visual aid)
 
-I'm going to present the analysis in this HTML, which I hope doesn't become to long. We can discuss it further in our next meeting. 
+I'm going to present the analysis in this HTML, which I hope doesn't become too long. We can discuss it further in our next meeting.
 
----
-
+------------------------------------------------------------------------
 
 ```{r loading the data}
 exp_data <- read_csv("study2b_total.csv")
@@ -50,14 +50,13 @@ exp_data[, c(46, 51, 56)] <- lapply(exp_data[, c(46, 51, 56)], as.factor)
 
 # Data Cleaning
 
-First, and just like you suggested, I'm using the two batches together and included a new variable called `pilot` which differentiates the first batch (pilot_a = with visual aid) from the second batch (pilot_b = without visual aid)
+First, and just like you suggested, I'm using the two batches together and included a new variable called `pilot`, which differentiates the first batch (pilot_a = with visual aid) from the second batch (pilot_b = without visual aid)
 
-Second, I'm removing participants that either answer to fast (below 5 minutes) or took too long (above 20 minutes). 
+Second, I'm removing participants that either answered too fast (below 5 minutes) or took too long (above 25 minutes).
 
-Here is a histogram of `duration_min` along with the summary statistics. 
+Here is a histogram of `duration_min` along with the summary statistics.
 
-As it can be observed, there are a few observations that answer in less than 5 minutes and some that took almost 40 min. 
-
+---
 
 ```{r cleaning}
 
@@ -66,7 +65,9 @@ ggplot(exp_data, aes(x = duration_min)) +
   labs(title = "Duration in Min",
        x = "Duration (Minutes)",
        y = "Frequency") +
-  theme_minimal()
+  theme_minimal() +
+  theme(plot.title = element_text(hjust = 0.5)) # Center the title
+
 
 # Calculate the summary statistics
 duration_summary <- summary(exp_data$duration_min)
@@ -85,13 +86,13 @@ kable(summary_df, format = "html", caption = "Summary of Duration (Minutes)", al
 
 ```
 
-
 ---
 
-My idea is to trim this data so that I only keep those above the 10th percentile and below the 95 percentile. 
+As can be observed, a few observations clearly did not take the survey seriously. I'm trimming all participants whose duration is below 4 minutes and above 20 minutes.
 
-Here are the resulting histogram and descriptives of `duration_min`.
+Here are the resulting histogram and descriptives of `duration_min` after the removal of observations. 
 
+---
 
 ```{r triming}
 
@@ -100,21 +101,22 @@ Here are the resulting histogram and descriptives of `duration_min`.
 #lower_bound <- quantile(exp_data$duration_min, 0.10)
 #upper_bound <- quantile(exp_data$duration_min, 0.90)
 
-lower_bound <- 5  # Lower bound set to 5 minutes
-upper_bound <- 30 # Upper bound set to 20 minutes
+lower_bound <- 4  # Lower bound set to 4 minutes
+upper_bound <- 20 # Upper bound set to 20 minutes
 
 
 # Filter the data to retain only observations between the 5th and 95th percentiles
-#exp_data_t <- exp_data[exp_data$duration_min > lower_bound & exp_data$duration_min < upper_bound, ]
+exp_data_t <- exp_data[exp_data$duration_min > lower_bound & exp_data$duration_min < upper_bound, ]
 
-exp_data_t <- exp_data[exp_data$duration_min > lower_bound & exp_data$duration_min < upper_bound & exp_data$pilot == "pilot_b", ]
+#exp_data_t <- exp_data[exp_data$duration_min > lower_bound & exp_data$duration_min < upper_bound & exp_data$pilot == "pilot_b", ]
 
 ggplot(exp_data_t, aes(x = duration_min)) +
   geom_histogram(binwidth = 2, fill = "blue", alpha = 0.7) +
   labs(title = "Duration in Min",
        x = "Duration (Minutes)",
        y = "Frequency") +
-  theme_minimal()
+  theme_minimal() +
+  theme(plot.title = element_text(hjust = 0.5)) # Center the title
 
 # Calculate the summary statistics
 duration_summary <- summary(exp_data_t$duration_min)
@@ -134,18 +136,35 @@ kable(summary_df, format = "html", caption = "Summary of Duration (Minutes)", al
 
 ```
 
+---
+
+The new minimum duration is `r round(min(exp_data_t$duration_min), 2)`
+
+The new maximum duration is `r round(max(exp_data_t$duration_min), 2)`
+
+This reduces the data set to a total of `r nrow(exp_data)` observations. 
+
+---
 
 # Descriptives
 
-Here is a table with the mean, standard deviation, and \( n \). For clarity, these are the names of the variables.
 
-- `text_type`: The main independent variable indicating the type of text that was presented, which has three levels: `met_a`= metaphor apt; `met_na= non-apt metaphor; and `literal` = control condition.  
+With the clean data, here is a table with the mean, standard deviation, and number of observations of the main variables. . 
+
+For clarity, these are the names of the variables.
+
+- `text_type`: The main independent variable indicating the type of text that was presented, which has three levels:
+  - `met_a` = metaphor apt;
+  - `met_na` = non-apt metaphor;
+  - `literal` = control condition.
 - `ave_sk_t1`: Mean Subjective Knowledge before presenting the Text (Time 1).
 - `ave_sk_t2`: Mean Subjective Knowledge after presenting the Text (Time 2).
 - `ave_sk_t3`: Mean Subjective Knowledge after presenting the Objective Knowledge Scale (Time 3).
-- `ave_wta`: Average of the Willingness to Adopt scale. 
-- `total_ok`: Results of Objective Knowledge Scale calculated by adding the correct answers. 
-- `duration_min`: Average time it took to complete the survey in minutes. 
+- `ave_wta`: Average of the Willingness to Adopt scale.
+- `total_ok`: Results of Objective Knowledge Scale calculated by adding the correct
+- `duration_min`: Average time it took to complete the survey in minutes.
+
+---
 
 ```{r descriptives}
 
@@ -165,7 +184,6 @@ data_summary <- exp_data_t %>%
     p75 = quantile(value, 0.75, na.rm = TRUE), # 75th percentile
     n = n()
   )
-
 
 data_summary_grouped <- exp_data_t %>%
   gather(variable, value, all_of(variables)) %>% # Using all_of for variable selection
@@ -194,24 +212,32 @@ data_summary_grouped %>%
 
 ```
 
+After the trim, we end up with more than 30 observations per condition. This, however, will change ahead, since the the variable `pilot` which I used to differentiate the two badges **did have an effect** on some of the analysis
 
----
+The following sections explore each variable in detail. 
+
+--- 
 
 # Subjective Knowledge
 
-Now that I have cleaned the data, let's analyze it, starting with the subjective knowledge scale. 
+Let's analyze it, starting with the subjective knowledge scale.
 
-Again, for clarity, keep in mind that: 
+Again, for clarity, keep in mind that:
 
 - `ave_sk_t1`: Mean Subjective Knowledge before presenting the Text (Time 1).
 - `ave_sk_t2`: Mean Subjective Knowledge after presenting the Text (Time 2).
 - `ave_sk_t3`: Mean Subjective Knowledge after presenting the Objective Knowledge Scale (Time 3).
-
-First, let's run an a simple Repeated measured ANOVA
+- `delta_sk2_sk1`: The difference between `ave_sk_t2` and `ave_sk_t1`
+- `delta_sk3_sk2`: The difference between `ave_sk_t3` and `ave_sk_t2`
+- `delta_sk3_sk1`: The difference between `ave_sk_t3` and `ave_sk_t1`
 
 ## SK ANOVA's
 
-```{r sk}
+First, let's run a simple Repeated measured ANOVA. I'm including the variable `pilot`as a covariate, as you can see in the code below.
+
+---
+
+```{r sk dataframes}
 
 sk_df <- exp_data_t %>%
   select(ResponseId, ave_sk_t1, ave_sk_t2, ave_sk_t3, text_type, pilot) %>%
@@ -220,19 +246,36 @@ sk_df <- exp_data_t %>%
     names_to = "sk_time",
     values_to = "ave_sk"
   )
+
+sk_df2 <- exp_data_t %>%
+  select(ResponseId, text_type,ave_sk_t1, ave_sk_t2, ave_sk_t3, delta_sk2_sk1, delta_sk3_sk2, delta_sk3_sk1, pilot) %>%
+  mutate(delta_sk2_sk1_sq = delta_sk2_sk1^2,
+         delta_sk3_sk2_sq = delta_sk3_sk2^2,
+         delta_sk3_sk1_sq = delta_sk3_sk1^2)
+
+sk_df3 <- exp_data_t %>%
+  select(ResponseId, ave_sk_t1, ave_sk_t2, ave_sk_t3, text_type, pilot) 
 ```
 
-```{r sk ANOVA}
-
+```{r sk anova with control, echo=TRUE}
 
 # Conduct the repeated measures ANOVA
-#anova_sk <- aov(ave_sk ~ sk_time + pilot + Error(ResponseId/sk_time), data = sk_df)
-
-anova_sk <- aov(ave_sk ~ sk_time + Error(ResponseId/sk_time), data = sk_df)
+anova_sk <- aov(ave_sk ~ sk_time + pilot + Error(ResponseId/sk_time), data = sk_df)
+#anova_sk <- aov(ave_sk ~ sk_time + Error(ResponseId/sk_time), data = sk_df)
 
 
 # Print the summary
 summary(anova_sk)
+
+```
+
+If I'm reading the output correctly, `pilot` didn't have an effect on Subjective Knowledge. In that sense, we can keep the whole data set.
+
+Below we can see a table with the means per condition, a line graph that show the results and the post-hoc analysis 
+
+---
+
+```{r sk ANOVA, fig.align='center'}
 
 # Calculate the means and standard errors
 sk_summary <- sk_df %>%
@@ -263,17 +306,34 @@ ggplot(sk_summary, aes(x=sk_time, y=mean_ave_sk, group=1)) +
     y="Average SK"
   ) +
   ylim(1, 7) + # Set the limits of the Y-axis
-  theme_minimal()
+  theme_minimal() +
+  theme(plot.title = element_text(hjust = 0.5)) # Center the title
 
+
+# Obtain the estimated marginal means
+emm <- emmeans(anova_sk, ~ sk_time)
+
+# Perform pairwise comparisons with Tukey adjustments
+pairs <- pairs(emm, adjust = "tukey")
+
+# Print the results
+print(pairs)
 
 ```
 
+Looking at the plot, it is clear (as we saw) that the differences are due to the lower scores in the first measure of SK. 
+
+It seems that regardless of the experimental text, participants increased their SK after being presented with the text. There is a slight decrease in SK for time 3, that goes from 5.28 to 5.06, which seems to be moderately significant, according to the post-hoc analysis. 
+
+In other words, without accounting for the experimental stimuli, participants first increased their **Subjective Knowledge** after being presented with the text and decrease it after being asked to complete the **Objective Knowledge** scale. 
+
+Next, I conducted a mixed two-way ANOVA
 
 ---
-Here are the results for a mixed two-way ANOVA
+
+## Mixed two-way ANOVA 
 
 ```{r sk mixed anova}
-
 # Load the necessary libraries
 library(nlme)
 library(car) # For Type III SS
@@ -283,14 +343,11 @@ sk_df$sk_time <- factor(sk_df$sk_time)
 sk_df$text_type <- factor(sk_df$text_type)
 sk_df <- na.omit(sk_df)
 
-
 # Fit the model with sk_time as a within-subjects factor, text_type as a between-subjects factor, and a random intercept for each subject
 
-model <- lme(ave_sk ~ text_type * sk_time, random = ~1 | ResponseId, data = sk_df)
+#model <- lme(ave_sk ~ text_type * sk_time, random = ~1 | ResponseId, data = sk_df)
 
-#model <- lme(ave_sk ~ text_type * sk_time + pilot, random = ~1 | ResponseId, data = sk_df)
-
-
+model <- lme(ave_sk ~ text_type * sk_time + pilot, random = ~1 | ResponseId, data = sk_df)
 
 # Use the Anova function from the car package to get Type III SS
 mix_anova_sk <- Anova(model, type = "III")
@@ -300,8 +357,13 @@ print(mix_anova_sk)
 
 ```
 
+the results indicate that both `text_type` and `sk_time` have significant main effects on the response variable `ave_sk`, but their interaction is not significant. Again, the `pilot` variable does not have a significant effect.
 
-```{r sk mixed anova visualization}
+Below are the table with the means, the plot and the posthoc test for the `text_type` and `sk_time` 
+For ease of reading, I'm going to present the posthoc comparisons separately. 
+---
+
+```{r sk mixed anova visualization,  fig.align='center'}
 # Calculate the means and standard errors for each combination of text_type and sk_time
 
 sk_summary <- sk_df %>%
@@ -310,8 +372,7 @@ sk_summary <- sk_df %>%
     n_obs = n(),
     mean_ave_sk = mean(ave_sk, na.rm = TRUE),
     se_ave_sk = sd(ave_sk, na.rm = TRUE) / sqrt(n()),
-    .groups = "drop"
-  )
+    .groups = "drop")
 
 # Formatting the table with kable and kableExtra
 sk_summary %>%
@@ -319,8 +380,6 @@ sk_summary %>%
   kable_styling("striped", full_width = FALSE) %>%
   add_header_above(c(" " = 2, "Subjective Knowledge" = 3)) %>% # Corrected the number of columns
   column_spec(3:5, bold = TRUE, color = "blue") # Adjusted the column range
-
-
 
 # Create the plot
 ggplot(sk_summary, aes(x=sk_time, y=mean_ave_sk, group=text_type, color=text_type)) +
@@ -334,121 +393,231 @@ ggplot(sk_summary, aes(x=sk_time, y=mean_ave_sk, group=text_type, color=text_typ
   ) +
   ylim(1, 7) + # Set the limits of the Y-axis
   theme_minimal() +
-  scale_color_brewer(palette="Set1") # Use a color palette for the different text types
-```
-
-# Objective Knowledge
-
-```{r OK data frames and summary}
-
-ok_df <- exp_data_t %>%
-  select(ResponseId, total_ok, text_type, wta_moment, pilot)
-
-ok_df <- na.omit(ok_df) # Remove missing values
-
-ok_summary <- ok_df %>%
-  group_by(text_type, wta_moment) %>%
-  summarise(
-    n_obs = n(),
-    mean_total_ok = mean(total_ok, na.rm = TRUE),
-    se_total_ok = sd(total_ok, na.rm = TRUE) / sqrt(n()),
-    .groups = "drop"
-  )
-
-ok_summary %>%
-  kable("html") %>%
-  kable_styling("striped", full_width = F) %>%
-  add_header_above(c("Summary Statistics" = 5), font_size = 15) %>%
-  column_spec(1, bold = T, color = "blue") %>%
-  column_spec(2, italic = T)
+  scale_color_brewer(palette="Set1") + # Use a color palette for the different text types 
+  theme(plot.title = element_text(hjust = 0.5)) # Center the title
 
 ```
 
-## Two-way Anova for OK
+---
+
+<center>**Pairwise comparison just for text_type **.</center>
 
 ```{r}
-# Run the two-way ANOVA
-anova_ok <- aov(total_ok ~ text_type * wta_moment, data = ok_df)
+emm_text_type <- emmeans(model, ~ text_type)
+pairs_text_type <- pairs(emm_text_type, adjust = "tukey")
+summary_pairs_text_type <- summary(pairs_text_type)
+print(summary_pairs_text_type)
+```
 
-#anova_ok <- aov(total_ok ~ text_type * pilot, data = ok_df)
 
-#summary(anova_ok2)
+---
 
-# Print the summary of the ANOVA
-summary(anova_ok)
+<center>**Pairwise comparison just for sk_time **.</center>
 
-# Compute the means and standard errors for each combination of text_type and wta_moment
-ok_summary <- ok_df %>%
-  group_by(text_type, wta_moment) %>%
+
+```{r}
+emm_sk <- emmeans(model, ~ sk_time)
+pairs_sk <- pairs(emm_sk, adjust = "tukey")
+summary_pairs_sk <- summary(pairs_sk)
+print(summary_pairs_sk)
+```
+
+
+These results, to me, are indicative that the stimuli are not working as intended. 
+
+When we look at the effect of `sk_time` on `ave_sk`, it seems that presenting participants with an explicative text does not lead to the shattering of the illusion of knowing. Perhaps this is because participants aren't required to make any effort to explain how metabolism works but instead are **"passively"** consuming information that differs in format. In that sense, it is possible that participants feel that they have **"learned"** something, increasing their rating `ave_sk` instead of realizing they don't know much about the subject. 
+
+This effect of `sk_time` on `ave_sk` is shown both in the highly significant coefficient as well as in the posthoc analysis. In the latter, all of the instances present significant difference, with the difference between T2 and T3 slightly less strong (p < 0.1). 
+
+What this indicates is that indeed participants "gained" subjective knowledge when presented with the stimuli and then lost it after they were presented with the Objective Knowledge Scale. 
+
+**This is VERY IMPORTANT (I believe)**
+
+When we look at the effect of `text_type` on `ave_sk`, it seems that participants in the apt metaphor condition report slightly higher levels  of subjective knowledge than participants in the non-apt metaphor condition, although this is not reflected in the posthoc analysis. 
+
+Now I'm going to perform the analysis using the deltas. 
+
+## SK Deltas
+
+First, let's take a look at the distribution of the Deltas. 
+
+I'm including a squared version of each delta because I think it is better to handle negative values and, also, because it gives a greater weight to largers differences. The problem is that it distorts the distributions, so I'm not sure if it's a good idea. 
+
+In any case, I'm doing both for you to consider. 
+
+```{r deltas vis, fig.align='center'}
+
+# Reshape the data into a long format
+sk_df2_long <- sk_df2 %>%
+  select(delta_sk2_sk1, delta_sk3_sk2, delta_sk3_sk1, delta_sk2_sk1_sq, delta_sk3_sk2_sq, delta_sk3_sk1_sq) %>%
+  gather(key = "variable", value = "value")
+
+# Create the faceted plot
+ggplot(sk_df2_long, aes(x = value)) +
+  geom_histogram(binwidth = 0.5, fill = "blue", alpha = 0.7) +
+  facet_wrap(~ variable, scales = "free", ncol = 2) +
+  labs(
+    title = "Histograms of Deltas of Subjective Knowledge",
+    x = "Value",
+    y = "Frequency"
+  ) +
+  theme_minimal() +
+    theme(plot.title = element_text(hjust = 0.5))
+
+```
+
+### SK Deltas without squaring 
+
+Now, I want to know if there are differences in `delta_sk2_sk1`
+
+```{r}
+sk_df2 <- na.omit(sk_df2)
+model_delta <- aov(delta_sk2_sk1 ~ text_type + pilot, data = sk_df2)
+#model_delta <- aov(delta_sk2_sk1 ~ text_type, data = sk_df2)
+
+summary(model_delta)
+
+
+```
+
+Here is the plot.
+
+```{r, fig.align='center'}
+
+# Calculate the means and standard errors
+means_se <- sk_df2 %>%
+  group_by(text_type) %>%
   summarise(
-    n_obs = n(),
-    mean_total_ok = mean(total_ok, na.rm = TRUE),
-    se_total_ok = sd(total_ok, na.rm = TRUE) / sqrt(n()),
+    mean_delta = mean(delta_sk2_sk1, na.rm = TRUE),
+    se_delta = sd(delta_sk2_sk1, na.rm = TRUE) / sqrt(n()),
     .groups = "drop"
   )
 
-# Now we can create a ggplot with both independent variables
-ggplot(ok_summary, aes(x = text_type, y = mean_total_ok, group = wta_moment, color = wta_moment)) +
-  geom_line() +
-  geom_errorbar(aes(ymin = mean_total_ok - se_total_ok, ymax = mean_total_ok + se_total_ok), width = 0.2) +
-  labs(title = "Interaction between Text Type and WTA Moment",
-       x = "Text Type",
-       y = "Mean Total OK",
-       color = "WTA Moment") +
-  ylim(1,9) +
-  theme_minimal()
+# Create the plot
+ggplot(means_se, aes(x = text_type, y = mean_delta, group = 1)) +
+  geom_line(color = "blue") + # Line connecting the points
+  geom_point(size = 3, color = "red") + # Points for the means
+  geom_errorbar(aes(ymin = mean_delta - se_delta, ymax = mean_delta + se_delta), width = 0.2) + # Error bars
+  labs(
+    title = "Effect of Text Type on Delta SK2 SK1",
+    x = "Text Type",
+    y = "Mean Delta SK2 SK1"
+  ) +
+  theme_minimal() +
+  theme(plot.title = element_text(hjust = 0.5)) # Center the title
+
 ```
 
+### SK Deltas squaring. 
 
-# WTA
+```{r}
 
-```{r wta summary}
-wta_df <- exp_data_t %>%
-  select(ResponseId, total_ok, text_type, wta_moment, ave_wta, ave_sk_t1, ave_sk_t2, ave_sk_t3)
+model_delta_sq <- aov(delta_sk2_sk1_sq ~ text_type + pilot, data = sk_df2)
+#model_delta_sq <- aov(delta_sk2_sk1_sq ~ text_type, data = sk_df2)
 
-wta_df <- na.omit(wta_df)
+summary(model_delta_sq)
 
-wta_summary <- wta_df %>%
-  group_by(text_type, wta_moment) %>%
+```
+
+And here is the plot for the squared differences
+
+```{r squared deltas, fig.align='center'}
+
+# Calculate the means and standard errors
+means_se <- sk_df2 %>%
+  group_by(text_type) %>%
   summarise(
-    n_obs = n(), # Number of observations per group
-    mean_wta_ok = mean(ave_wta, na.rm = TRUE),
-    se_wta_ok = sd(ave_wta, na.rm = TRUE) / sqrt(n()),
+    mean_delta = mean(delta_sk2_sk1_sq, na.rm = TRUE),
+    se_delta = sd(delta_sk2_sk1_sq, na.rm = TRUE) / sqrt(n()),
     .groups = "drop"
   )
 
-wta_summary %>%
-  kable("html") %>%
-  kable_styling("striped", full_width = F) %>%
-  add_header_above(c("Summary Statistics" = 5), font_size = 15) %>%
-  column_spec(1, bold = T, color = "blue") %>%
-  column_spec(2, italic = T)
+# Create the plot
+ggplot(means_se, aes(x = text_type, y = mean_delta, group = 1)) +
+  geom_line(color = "blue") + # Line connecting the points
+  geom_point(size = 3, color = "red") + # Points for the means
+  geom_errorbar(aes(ymin = mean_delta - se_delta, ymax = mean_delta + se_delta), width = 0.2) + # Error bars
+  labs(
+    title = "Effect of Text Type on Squared Delta SK2 SK1",
+    x = "Text Type",
+    y = "Mean Delta SK2 SK1"
+  ) +
+  theme_minimal() +
+  theme(plot.title = element_text(hjust = 0.5)) # Center the title
 
 ```
 
-```{r wta ANOVA}
-# Run the two-way ANOVA
-anova_wta <- aov(ave_wta ~ text_type * wta_moment, data = wta_df)
+### ANOVA for av_sk_t2 controlling for av_sk_t1
 
-# Print the summary of the ANOVA
-summary(anova_wta)
+Lastly, I want to see if there are differences in the average subjective knowledge reported in Time 2 (after the experimental stimui was presented) controlling for the score of av_sk_t1 and pilot. 
 
+```{r sk controlling, fig.align='center'}
+# Fit the ANCOVA model
+model_ancova <- lm(ave_sk_t2 ~ text_type + pilot + ave_sk_t1, data = sk_df3)
 
-library(ggplot2)
-library(dplyr)
+# Summary of the model
+summary(model_ancova)
 
-
-# Create the line plot with y-axis limits set from 0 to 10, and add standard error bars
-ggplot(wta_summary, aes(x = text_type, y = mean_wta_ok, color = wta_moment, group = wta_moment)) +
-  geom_line() +
-  geom_point() +
-  geom_errorbar(aes(ymin = mean_wta_ok - se_wta_ok, ymax = mean_wta_ok + se_wta_ok), width = 0.2) +
-  labs(title = "Interaction Plot",
-       subtitle = "Effects of text_type and wta_moment on ave_wpa",
-       x = "Text Type",
-       y = "Mean of WTA",
-       color = "WTA Moment") +
-  ylim(0, 5) +  # Set y-axis limits
-  theme_minimal()
+write.csv(sk_df3, "sk_df3.csv", col.names = FALSE)
 ```
+```{r}
+
+sk_df3 <- na.omit(sk_df3)
+
+ancova_model <- lm(ave_sk_t2 ~ ave_sk_t1 + text_type + pilot, data = sk_df3)
+
+text_type_levels <- levels(sk_df3$text_type)
+colors <- brewer.pal(length(text_type_levels), "Set1")
+
+for (pilot_level in unique(sk_df3$pilot)) {
+  subset_data <- sk_df3[sk_df3$pilot == pilot_level,]
+  plot(NULL, xlim=c(0.5, length(text_type_levels) + 0.5), ylim=range(subset_data$ave_sk_t2),
+       xlab="Text Type", ylab="Average Subjective Knowledge at Time 2",
+       main=paste("Relationship between ave_sk_t2 and text_type (", pilot_level, ")", sep=""),
+       xaxt="n")
+  axis(1, at=1:length(text_type_levels), labels=text_type_levels)
+  for (i in 1:length(text_type_levels)) {
+    points(rep(i, nrow(subset_data[subset_data$text_type == text_type_levels[i],])), 
+           subset_data$ave_sk_t2[subset_data$text_type == text_type_levels[i]], col=colors[i], pch=16)
+  }
+  legend("topright", legend=text_type_levels, col=colors, pch=16, title="Text Type")
+  
+  # Adding the fitted line from the ANCOVA model
+  lines(1:length(text_type_levels), 
+        sapply(text_type_levels, function(tt) {
+          predict(ancova_model, newdata=data.frame(ave_sk_t1=mean(subset_data$ave_sk_t1), 
+                                                   text_type=tt, pilot=pilot_level))
+        }), col="red", lwd=2)
+}
+
+```
+As you can see, The coefficients for the `text_type` factor levels "met_a" and "met_na" are 0.0983 and -0.0230, respectively. Neither of these coefficients is statistically significant (p > 0.05)
+so there is no evidence of a difference in `ave_sk_t2` across the `text_type` levels, after controlling for `ave_sk_t1` and `pilot`.
+
+There is a mildly significant effect of `pilot` -0.27348 (p < 0.1). 
+
+Finally, `ave_sk_t1` has a coefficient of 0.4230 which is highly significant (p < 0.01), which makes sense since we saw that the scores of SK are related to the scores at time 2. 
+
+
+---
+
+# Discussion of SK Scale. 
+
+As I said before, I believe that the stimuli is not working as predicted. 
+Presenting participants with explanatory text. regardless of the type of text, seems to increase participant's perceive understanding of how metabolism work. 
+
+When you think about it, this makes sense. 
+
+Participants have no reason to feel their SK threatened in any way, because their knowledge has not been tested yet. They probably think they now know more, since they have just acquired additional information. This effect is shown in the significant differences of SK between T1 and T2. Also, and perhaps more importantly, the difference between T2 and T3 is also significant, but in the opposite direction, meaning that after participants were asked to answer the Objective Knowledge Scale their perceived understanding suffered. 
+
+Finally, when the information is presented as an extended apt metaphor it appears to have a greater effect on SK than when it is presented with a non-apt extended metaphor. This effect is very mild, but it could indicate that apt metaphors are better at increasing SK relative to non-apt metaphors. 
+
+# What to do next?
+
+I believe we need to find a better way to shatter the illusion of knowing. Instead of using a Objective Knowledge scale, we could ask participants to explain, in their own words, what they've just read. Doing so will probably be difficult, specially for the literal condition. Therefore, we could expect a higher drop of SK from T2 to T3 in the literal and non-apt metaphors conditions. 
+
+
+
+
+
 

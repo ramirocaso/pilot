@@ -1,0 +1,114 @@
+
+# Objective Knowledge
+
+```{r OK data frames and summary}
+
+ok_df <- exp_data_t %>%
+  select(ResponseId, total_ok, text_type, wta_moment, pilot)
+
+ok_df <- na.omit(ok_df) # Remove missing values
+
+ok_summary <- ok_df %>%
+  group_by(text_type, wta_moment) %>%
+  summarise(
+    n_obs = n(),
+    mean_total_ok = mean(total_ok, na.rm = TRUE),
+    se_total_ok = sd(total_ok, na.rm = TRUE) / sqrt(n()),
+    .groups = "drop"
+  )
+
+ok_summary %>%
+  kable("html") %>%
+  kable_styling("striped", full_width = F) %>%
+  add_header_above(c("Summary Statistics" = 5), font_size = 15) %>%
+  column_spec(1, bold = T, color = "blue") %>%
+  column_spec(2, italic = T)
+
+```
+
+## Two-way Anova for OK
+
+```{r}
+# Run the two-way ANOVA
+anova_ok <- aov(total_ok ~ text_type * wta_moment, data = ok_df)
+
+#anova_ok <- aov(total_ok ~ text_type * pilot, data = ok_df)
+
+#summary(anova_ok2)
+
+# Print the summary of the ANOVA
+summary(anova_ok)
+
+# Compute the means and standard errors for each combination of text_type and wta_moment
+ok_summary <- ok_df %>%
+  group_by(text_type, wta_moment) %>%
+  summarise(
+    n_obs = n(),
+    mean_total_ok = mean(total_ok, na.rm = TRUE),
+    se_total_ok = sd(total_ok, na.rm = TRUE) / sqrt(n()),
+    .groups = "drop"
+  )
+
+# Now we can create a ggplot with both independent variables
+ggplot(ok_summary, aes(x = text_type, y = mean_total_ok, group = wta_moment, color = wta_moment)) +
+  geom_line() +
+  geom_errorbar(aes(ymin = mean_total_ok - se_total_ok, ymax = mean_total_ok + se_total_ok), width = 0.2) +
+  labs(title = "Interaction between Text Type and WTA Moment",
+       x = "Text Type",
+       y = "Mean Total OK",
+       color = "WTA Moment") +
+  ylim(1,9) +
+  theme_minimal()
+```
+
+# WTA
+
+```{r wta summary}
+wta_df <- exp_data_t %>%
+  select(ResponseId, total_ok, text_type, wta_moment, ave_wta, ave_sk_t1, ave_sk_t2, ave_sk_t3)
+
+wta_df <- na.omit(wta_df)
+
+wta_summary <- wta_df %>%
+  group_by(text_type, wta_moment) %>%
+  summarise(
+    n_obs = n(), # Number of observations per group
+    mean_wta_ok = mean(ave_wta, na.rm = TRUE),
+    se_wta_ok = sd(ave_wta, na.rm = TRUE) / sqrt(n()),
+    .groups = "drop"
+  )
+
+wta_summary %>%
+  kable("html") %>%
+  kable_styling("striped", full_width = F) %>%
+  add_header_above(c("Summary Statistics" = 5), font_size = 15) %>%
+  column_spec(1, bold = T, color = "blue") %>%
+  column_spec(2, italic = T)
+
+```
+
+```{r wta ANOVA}
+# Run the two-way ANOVA
+anova_wta <- aov(ave_wta ~ text_type * wta_moment, data = wta_df)
+
+# Print the summary of the ANOVA
+summary(anova_wta)
+
+
+library(ggplot2)
+library(dplyr)
+
+
+# Create the line plot with y-axis limits set from 0 to 10, and add standard error bars
+ggplot(wta_summary, aes(x = text_type, y = mean_wta_ok, color = wta_moment, group = wta_moment)) +
+  geom_line() +
+  geom_point() +
+  geom_errorbar(aes(ymin = mean_wta_ok - se_wta_ok, ymax = mean_wta_ok + se_wta_ok), width = 0.2) +
+  labs(title = "Interaction Plot",
+       subtitle = "Effects of text_type and wta_moment on ave_wpa",
+       x = "Text Type",
+       y = "Mean of WTA",
+       color = "WTA Moment") +
+  ylim(0, 5) +  # Set y-axis limits
+  theme_minimal()
+```
