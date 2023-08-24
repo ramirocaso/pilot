@@ -1,0 +1,207 @@
+---
+title: "Ok_REPORT"
+author: "Ramiro Casó - Incae Business School"
+date: "`r Sys.Date()`"
+output:
+  html_document:
+    css: custom.css
+    theme: journal
+    toc: yes
+    toc_float: yes
+    number_sections: yes
+  word_document:
+    toc: yes
+    fig_caption: yes
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(
+	echo = FALSE,
+	message = FALSE,
+	warning = FALSE
+)
+```
+
+
+```{r libraries}
+library(kableExtra)
+library(knitr)
+library(tidyverse) # Includes ggplot2, dplyr, and other data manipulation libraries
+library(readr)
+library(rstatix)
+library(ggpubr)
+library(emmeans)
+library(lmtest)
+library(tidyr)
+library(RColorBrewer)
+```
+
+```{r loading the data}
+exp_data <- read_csv("study2b_total.csv")
+exp_data[, c(46, 51, 56)] <- lapply(exp_data[, c(46, 51, 56)], as.factor)
+
+lower_bound <- 4  # Lower bound set to 4 minutes
+upper_bound <- 20 # Upper bound set to 20 minutes
+
+
+# Filter the data to retain only observations between the 5th and 95th percentiles
+exp_data_t <- exp_data[exp_data$duration_min > lower_bound & exp_data$duration_min < upper_bound, ]
+
+```
+
+# Descriptive Statistics
+
+```{r OK data frames and summary}
+
+ok_df <- exp_data_t %>%
+  select(ResponseId, total_ok, text_type, wta_moment, pilot, ave_time)
+
+ok_df <- na.omit(ok_df) # Remove missing values
+
+ok_summary <- ok_df %>%
+  group_by(text_type, wta_moment) %>%
+  summarise(
+    n_obs = n(),
+    mean_total_ok = mean(total_ok, na.rm = TRUE),
+    se_total_ok = sd(total_ok, na.rm = TRUE) / sqrt(n()),
+    .groups = "drop"
+  )
+
+ok_summary %>%
+  kable(format = knitr::opts_knit$get("rmarkdown.pandoc.to")) %>%
+  kable_styling("striped", full_width = F) %>%
+  add_header_above(c("Summary Statistics" = 5), font_size = 15) %>%
+  column_spec(1, bold = T) %>%
+  column_spec(2, italic = T)
+
+```
+
+---
+
+# OK ANOVA
+
+```{r ok Anova}
+# Run the two-way ANOVA
+anova_ok <- aov(total_ok ~ text_type + wta_moment + ave_time + pilot, data = ok_df)
+
+# Print the summary of the ANOVA
+summary(anova_ok)
+
+
+
+# Compute the means and standard errors for each combination of text_type and wta_moment
+ok_summary1 <- ok_df %>%
+  group_by(text_type) %>%
+  summarise(
+    n_obs = n(),
+    mean_total_ok = mean(total_ok, na.rm = TRUE),
+    se_total_ok = sd(total_ok, na.rm = TRUE) / sqrt(n()),
+    .groups = "drop"
+  )
+
+# Create the ggplot
+ggplot(ok_summary1, aes(x = text_type, y = mean_total_ok, group = 1)) + # Added group = 1
+  geom_line() +
+  geom_errorbar(aes(ymin = mean_total_ok - se_total_ok, ymax = mean_total_ok + se_total_ok), width = 0.2) +
+  labs(title = "Average Total OK by Text Type",
+       x = "Text Type",
+       y = "Mean Total OK") +
+  ylim(1, 9) +
+  theme_minimal()
+
+# Post-hoc analysis
+
+emm_ok <- emmeans(anova_ok, ~ text_type)
+pairs_ok <- pairs(emm_ok, adjust = "tukey")
+summary_pairs_ok <- summary(pairs_ok)
+print(summary_pairs_ok)
+
+```
+
+## OK ANOVA with `wta_moment`as an IV
+
+When we include `wta_moment` as an additional IV to see if there is any interaction.  
+
+```{r}
+
+# Run the two-way ANOVA
+anova_ok2 <- aov(total_ok ~ text_type * wta_moment + ave_time + pilot, data = ok_df)
+
+# Print the summary of the ANOVA
+summary(anova_ok2)
+
+# Compute the means and standard errors for each combination of text_type and wta_moment
+ok_summary <- ok_df %>%
+  group_by(text_type, wta_moment) %>%
+  summarise(
+    n_obs = n(),
+    mean_total_ok = mean(total_ok, na.rm = TRUE),
+    se_total_ok = sd(total_ok, na.rm = TRUE) / sqrt(n()),
+    .groups = "drop"
+  )
+
+# Now we can create a ggplot with both independent variables
+ggplot(ok_summary, aes(x = text_type, y = mean_total_ok, group = wta_moment, color = wta_moment)) +
+  geom_line() +
+  geom_errorbar(aes(ymin = mean_total_ok - se_total_ok, ymax = mean_total_ok + se_total_ok), width = 0.2) +
+  labs(title = "Interaction between Text Type and WTA Moment",
+       x = "Text Type",
+       y = "Mean Total OK",
+       color = "WTA Moment") +
+  ylim(1,9) +
+  theme_minimal()
+
+emm_ok2 <- emmeans(anova_ok2, ~ text_type * wta_moment)
+pairs_ok2 <- pairs(emm_ok2, adjust = "tukey")
+summary_pairs_ok2 <- summary(pairs_ok2)
+print(summary_pairs_ok2)
+```
+
+## OK ANOVA with `ave_time`as an IV
+
+```{r}
+
+# Run the two-way ANOVA
+anova_ok3 <- aov(total_ok ~ text_type * ave_time + wta_moment + pilot , data = ok_df)
+
+# Print the summary of the ANOVA
+summary(anova_ok3)
+
+# post-hoc analysis
+
+emm_ok3 <- emmeans(anova_ok3, ~ text_type * ave_time)
+pairs_ok3 <- pairs(emm_ok3, adjust = "tukey")
+summary_pairs_ok3 <- summary(pairs_ok3)
+print(summary_pairs_ok3)
+
+# Calculate means and standard errors
+text_type_summary <- ok_df %>%
+  group_by(text_type) %>%
+  summarise(
+    mean_total_ok = mean(total_ok, na.rm = TRUE),
+    se_total_ok = sd(total_ok, na.rm = TRUE) / sqrt(n()),
+    .groups = "drop"
+  )
+
+# Create a bar plot for text_type
+ggplot(text_type_summary, aes(x = text_type, y = mean_total_ok, fill = text_type)) +
+  geom_bar(stat = "identity") +
+  geom_errorbar(aes(ymin = mean_total_ok - se_total_ok, ymax = mean_total_ok + se_total_ok), width = 0.2) +
+  labs(title = "Total OK by Text Type",
+       x = "Text Type",
+       y = "Mean Total OK") +
+  theme_minimal() +
+  theme(legend.position = "none")
+
+# Create a scatter plot for ave_time
+ggplot(ok_df, aes(x = ave_time, y = total_ok)) +
+  geom_point() +
+  geom_smooth(method = "lm", se = FALSE, color = "red") +
+  labs(title = "Total OK by Average Time",
+       x = "Average Time",
+       y = "Total OK") +
+  theme_minimal()
+
+
+
+```
