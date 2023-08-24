@@ -11,16 +11,19 @@ output:
     number_sections: yes
   word_document:
     toc: yes
+    fig_caption: yes # Example of a Word-specific option
 ---
 
-```{r setup, include=FALSE, fig.align='center'}
+
+
+```{r setup, include=FALSE}
 knitr::opts_chunk$set(
 	echo = FALSE,
 	message = FALSE,
 	warning = FALSE
 )
-options(knitr.table.format = "html")
 ```
+
 
 ```{r libraries}
 library(kableExtra)
@@ -110,7 +113,7 @@ summary_df <- data.frame(
 # Round the values to 2 decimal points
 summary_df$Value <- round(summary_df$Value, 2)
 
-kable(summary_df, format = "html", caption = "Summary of Duration (Minutes)", align = c("c", "c"), row.names = FALSE)
+kable(summary_df, format = "pandoc", caption = "Summary of Duration (Minutes)", align = c("c", "c"), row.names = FALSE)
 
 
 ```
@@ -159,7 +162,7 @@ summary_df <- data.frame(
 # Round the values to 2 decimal points
 summary_df$Value <- round(summary_df$Value, 2)
 
-kable(summary_df, format = "html", caption = "Summary of Duration (Minutes)", align = c("c", "c"), row.names = FALSE)
+kable(summary_df, format = "pandoc", caption = "Summary of Duration (Minutes)", align = c("c", "c"), row.names = FALSE)
 
 
 
@@ -230,12 +233,12 @@ data_summary_grouped <- exp_data_t %>%
 ## First table
 
 data_summary %>%
-  kable(format = "html", digits = 2, align = 'c', caption = "Summary Statistics for All Variables") %>%
+  kable(format = "pandoc", digits = 2, align = 'c', caption = "Summary Statistics for All Variables") %>%
   kable_styling(full_width = FALSE)
 
 # Creating a table for data_summary_grouped
 data_summary_grouped %>%
-  kable(format = "html", digits = 2, align = 'c', caption = "Summary Statistics for Groped Variables") %>%
+  kable(format = "pandoc", digits = 2, align = 'c', caption = "Summary Statistics for Groped Variables") %>%
   kable_styling(full_width = FALSE)
 
 
@@ -269,7 +272,7 @@ First, let's run a simple Repeated measured ANOVA. I'm including the variable `p
 ```{r sk dataframes}
 
 sk_df <- exp_data_t %>%
-  select(ResponseId, ave_sk_t1, ave_sk_t2, ave_sk_t3, text_type, pilot) %>%
+  select(ResponseId, ave_sk_t1, ave_sk_t2, ave_sk_t3, text_type, pilot, ave_time) %>%
   pivot_longer(
     cols = c(ave_sk_t1, ave_sk_t2, ave_sk_t3),
     names_to = "sk_time",
@@ -277,19 +280,19 @@ sk_df <- exp_data_t %>%
   )
 
 sk_df2 <- exp_data_t %>%
-  select(ResponseId, text_type,ave_sk_t1, ave_sk_t2, ave_sk_t3, delta_sk2_sk1, delta_sk3_sk2, delta_sk3_sk1, pilot) %>%
+  select(ResponseId, text_type,ave_sk_t1, ave_sk_t2, ave_sk_t3, delta_sk2_sk1, delta_sk3_sk2, delta_sk3_sk1, pilot, ave_time, total_ok) %>%
   mutate(delta_sk2_sk1_sq = delta_sk2_sk1^2,
          delta_sk3_sk2_sq = delta_sk3_sk2^2,
          delta_sk3_sk1_sq = delta_sk3_sk1^2)
 
 sk_df3 <- exp_data_t %>%
-  select(ResponseId, ave_sk_t1, ave_sk_t2, ave_sk_t3, text_type, pilot) 
+  select(ResponseId, ave_sk_t1, ave_sk_t2, ave_sk_t3, text_type, ave_time, pilot, total_ok) 
 ```
 
 ```{r sk anova with control, echo=TRUE}
 
 # Conduct the repeated measures ANOVA
-anova_sk <- aov(ave_sk ~ sk_time + pilot + Error(ResponseId/sk_time), data = sk_df)
+anova_sk <- aov(ave_sk ~ sk_time + pilot + ave_time + Error(ResponseId/sk_time), data = sk_df)
 #anova_sk <- aov(ave_sk ~ sk_time + Error(ResponseId/sk_time), data = sk_df)
 
 
@@ -304,7 +307,7 @@ Below we can see a table with the means per condition, a line graph that show th
 
 ---
 
-```{r sk ANOVA, fig.align='center'}
+```{r sk ANOVA}
 
 # Calculate the means and standard errors
 sk_summary <- sk_df %>%
@@ -318,7 +321,7 @@ sk_summary <- sk_df %>%
 
 # Formatting the table with kable and kableExtra
 sk_summary %>%
-  kable("html") %>%
+  kable("pandoc") %>%
   kable_styling("striped", full_width = FALSE) %>%
   add_header_above(c("Time Point" = 1, "Number of Observations" = 1, "Subjective Knowledge" = 2)) %>%
   column_spec(2:3, bold = TRUE, color = "blue")
@@ -376,7 +379,7 @@ sk_df <- na.omit(sk_df)
 
 #model <- lme(ave_sk ~ text_type * sk_time, random = ~1 | ResponseId, data = sk_df)
 
-model <- lme(ave_sk ~ text_type * sk_time + pilot, random = ~1 | ResponseId, data = sk_df)
+model <- lme(ave_sk ~ text_type * sk_time + pilot + ave_time, random = ~1 | ResponseId, data = sk_df)
 
 # Use the Anova function from the car package to get Type III SS
 mix_anova_sk <- Anova(model, type = "III")
@@ -392,7 +395,7 @@ Below are the table with the means, the plot and the posthoc test for the `text_
 For ease of reading, I'm going to present the posthoc comparisons separately. 
 ---
 
-```{r sk mixed anova visualization,  fig.align='center'}
+```{r sk mixed anova visualization}
 # Calculate the means and standard errors for each combination of text_type and sk_time
 
 sk_summary <- sk_df %>%
@@ -405,7 +408,7 @@ sk_summary <- sk_df %>%
 
 # Formatting the table with kable and kableExtra
 sk_summary %>%
-  kable("html") %>%
+  kable("pandoc") %>%
   kable_styling("striped", full_width = FALSE) %>%
   add_header_above(c(" " = 2, "Subjective Knowledge" = 3)) %>% # Corrected the number of columns
   column_spec(3:5, bold = TRUE, color = "blue") # Adjusted the column range
@@ -470,11 +473,7 @@ Now I'm going to perform the analysis using the deltas.
 
 First, let's take a look at the distribution of the Deltas. 
 
-I'm including a squared version of each delta because I think it is better to handle negative values and, also, because it gives a greater weight to largers differences. The problem is that it distorts the distributions, so I'm not sure if it's a good idea. 
-
-In any case, I'm doing both for you to consider. 
-
-```{r deltas vis, fig.align='center'}
+```{r deltas vis}
 
 # Reshape the data into a long format
 sk_df2_long <- sk_df2 %>%
@@ -497,11 +496,11 @@ ggplot(sk_df2_long, aes(x = value)) +
 
 ### SK Deltas without squaring 
 
-Now, I want to know if there are differences in `delta_sk2_sk1`
+First, I want to know if there are differences in `delta_sk2_sk1`
 
 ```{r}
 sk_df2 <- na.omit(sk_df2)
-model_delta <- aov(delta_sk2_sk1 ~ text_type + pilot, data = sk_df2)
+model_delta <- aov(delta_sk2_sk1 ~ text_type + pilot + ave_time, data = sk_df2)
 #model_delta <- aov(delta_sk2_sk1 ~ text_type, data = sk_df2)
 
 summary(model_delta)
@@ -511,7 +510,7 @@ summary(model_delta)
 
 Here is the plot.
 
-```{r, fig.align='center'}
+```{r}
 
 # Calculate the means and standard errors
 means_se <- sk_df2 %>%
@@ -524,8 +523,7 @@ means_se <- sk_df2 %>%
 
 # Create the plot
 ggplot(means_se, aes(x = text_type, y = mean_delta, group = 1)) +
-  geom_line(color = "blue") + # Line connecting the points
-  geom_point(size = 3, color = "red") + # Points for the means
+  geom_bar(stat = "identity", fill = "orange", color = "blue") + # Bar for the means
   geom_errorbar(aes(ymin = mean_delta - se_delta, ymax = mean_delta + se_delta), width = 0.2) + # Error bars
   labs(
     title = "Effect of Text Type on Delta SK2 SK1",
@@ -535,11 +533,53 @@ ggplot(means_se, aes(x = text_type, y = mean_delta, group = 1)) +
   theme_minimal() +
   theme(plot.title = element_text(hjust = 0.5)) # Center the title
 
+
 ```
 
-### SK Deltas squaring. 
+---
+
+Second, I want to know if there are differences in `delta_sk3_sk2`
 
 ```{r}
+sk_df2 <- na.omit(sk_df2)
+model_delta <- aov(delta_sk3_sk2 ~ text_type + pilot + ave_time, data = sk_df2)
+#model_delta <- aov(delta_sk2_sk1 ~ text_type, data = sk_df2)
+
+summary(model_delta)
+
+
+```
+
+Here is the plot.
+
+```{r}
+
+# Calculate the means and standard errors
+means_se <- sk_df2 %>%
+  group_by(text_type) %>%
+  summarise(
+    mean_delta = mean(delta_sk3_sk2, na.rm = TRUE),
+    se_delta = sd(delta_sk3_sk2, na.rm = TRUE) / sqrt(n()),
+    .groups = "drop"
+  )
+
+# Create the plot
+ggplot(means_se, aes(x = text_type, y = mean_delta, group = 1)) +
+  geom_bar(stat = "identity", fill = "orange", color = "blue") + # Bar for the means
+  geom_errorbar(aes(ymin = mean_delta - se_delta, ymax = mean_delta + se_delta), width = 0.2) + # Error bars
+  labs(
+    title = "Effect of Text Type on Delta SK3 SK2",
+    x = "Text Type",
+    y = "Mean Delta SK2 SK2"
+  ) +
+  theme_minimal() +
+  theme(plot.title = element_text(hjust = 0.5)) # Center the title
+
+
+```
+
+
+```{r squared deltas 1, eval =FALSE, include=FALSE}
 
 model_delta_sq <- aov(delta_sk2_sk1_sq ~ text_type + pilot, data = sk_df2)
 #model_delta_sq <- aov(delta_sk2_sk1_sq ~ text_type, data = sk_df2)
@@ -548,9 +588,7 @@ summary(model_delta_sq)
 
 ```
 
-And here is the plot for the squared differences
-
-```{r squared deltas, fig.align='center'}
+```{r squared deltas 2, eval=FALSE, include=FALSE}
 
 # Calculate the means and standard errors
 means_se <- sk_df2 %>%
@@ -578,22 +616,25 @@ ggplot(means_se, aes(x = text_type, y = mean_delta, group = 1)) +
 
 ### ANOVA for av_sk_t2 controlling for av_sk_t1
 
-Lastly, I want to see if there are differences in the average subjective knowledge reported in Time 2 (after the experimental stimuli was presented) controlling for the score of av_sk_t1 and pilot. 
+Next, I want to see if there are differences in the average subjective knowledge reported in Time 2 (after the experimental stimuli was presented) controlling for the score of av_sk_t1 and pilot. 
 
-```{r sk controlling, fig.align='center'}
-# Fit the ANCOVA model
-model_ancova <- lm(ave_sk_t2 ~ text_type + pilot + ave_sk_t1, data = sk_df3)
-
-# Summary of the model
-summary(model_ancova)
-
-write.csv(sk_df3, "sk_df3.csv", col.names = FALSE)
-```
-```{r}
-
+```{r sk controlling a}
+# clean missing values
 sk_df3 <- na.omit(sk_df3)
 
-ancova_model <- lm(ave_sk_t2 ~ ave_sk_t1 + text_type + pilot, data = sk_df3)
+# Fit the ANCOVA model
+ancova_model_a <- lm(ave_sk_t2 ~ ave_sk_t1 + text_type + pilot, data = sk_df3)
+
+# Summary of the model
+summary(ancova_model_a)
+
+```
+
+Here are the plots
+
+```{r sk controlling a2}
+
+
 
 text_type_levels <- levels(sk_df3$text_type)
 colors <- brewer.pal(length(text_type_levels), "Set1")
@@ -614,14 +655,12 @@ for (pilot_level in unique(sk_df3$pilot)) {
   # Adding the fitted line from the ANCOVA model
   lines(1:length(text_type_levels), 
         sapply(text_type_levels, function(tt) {
-          predict(ancova_model, newdata=data.frame(ave_sk_t1=mean(subset_data$ave_sk_t1), 
+          predict(ancova_model_a, newdata=data.frame(ave_sk_t1=mean(subset_data$ave_sk_t1), 
                                                    text_type=tt, pilot=pilot_level))
         }), col="red", lwd=2)
 }
 
 ```
-
----
 
 As you can see, The coefficients for the `text_type` factor levels "met_a" and "met_na" are 0.0983 and -0.0230, respectively. Neither of these coefficients is statistically significant (p > 0.05)
 so there is no evidence of a difference in `ave_sk_t2` across the `text_type` levels, after controlling for `ave_sk_t1` and `pilot`.
@@ -630,12 +669,90 @@ There is a mildly significant effect of `pilot` -0.27348 (p < 0.1).
 
 Finally, `ave_sk_t1` has a coefficient of 0.4230 which is highly significant (p < 0.01), which makes sense since we saw that the scores of SK are related to the scores at time 2. 
 
+### ANOVA for av_sk_t3 controlling for av_sk_t1
+
+Lastly, I want to see if there are differences in the average subjective knowledge reported in Time 3 (after the experimental stimuli was presented) controlling for the score of av_sk_t1 and pilot. 
+
+```{r}
+# Remove NA values
+sk_df3 <- na.omit(sk_df3)
+
+# Fit the ANCOVA model
+ancova_model_b <- lm(ave_sk_t3 ~ text_type + pilot + ave_sk_t1 + total_ok, data = sk_df3)
+
+# Summary of the model
+summary(ancova_model_b)
+
+text_type_levels <- levels(sk_df3$text_type)
+colors <- brewer.pal(length(text_type_levels), "Set1")
+
+for (pilot_level in unique(sk_df3$pilot)) {
+  subset_data <- sk_df3[sk_df3$pilot == pilot_level,]
+  plot(NULL, xlim=c(0.5, length(text_type_levels) + 0.5), ylim=c(1, 7),
+       xlab="Text Type", ylab="Average Subjective Knowledge at Time 3",
+       main=paste("Relationship between ave_sk_t3 and text_type (", pilot_level, ")", sep=""),
+       xaxt="n")
+  axis(1, at=1:length(text_type_levels), labels=text_type_levels)
+  for (i in 1:length(text_type_levels)) {
+    points(rep(i, nrow(subset_data[subset_data$text_type == text_type_levels[i],])), 
+           subset_data$ave_sk_t3[subset_data$text_type == text_type_levels[i]], col=colors[i], pch=16)
+  }
+  legend("topright", legend=text_type_levels, col=colors, pch=16, title="Text Type")
+  
+# Adding the fitted line from the ANCOVA model
+  lines(1:length(text_type_levels), 
+        sapply(text_type_levels, function(tt) {
+          new_data <- data.frame(ave_sk_t1=mean(subset_data$ave_sk_t1), 
+                                 text_type=tt, pilot=pilot_level,
+                                 total_ok=mean(subset_data$total_ok)) # Include total_ok
+          predict(ancova_model_b, newdata=new_data)
+        }), col="red", lwd=2)
+
+}
+
+```
+
+---
+
+In the case of `ave_sk_t3` `ave_sk_t1`and `total_ok` show significant effects. The variable pilot may have a marginal effect, while the `text_type` variable does not appear to have a significant relationship with IV. 
+
+Below I included `total_ok`as an IV just to see if there was any significant interaction, but I didn't find one. 
+
+```{r}
+ancova_model_c <- lm(ave_sk_t3 ~ text_type * total_ok + pilot + ave_sk_t1, data = sk_df3)
+summary(ancova_model_c)
+
+
+# Create a grid of total_ok values for prediction
+new_data <- expand.grid(
+  text_type = levels(sk_df3$text_type),
+  total_ok = seq(min(sk_df3$total_ok), max(sk_df3$total_ok), length.out = 100),
+  pilot = unique(sk_df3$pilot), # Include other variables as needed
+  ave_sk_t1 = mean(sk_df3$ave_sk_t1) # Example: using the mean for ave_sk_t1
+)
+
+# Predict ave_sk_t3 using the new data
+new_data$predicted <- predict(ancova_model_c, newdata = new_data)
+
+# Plot the interaction
+ggplot(new_data, aes(x = total_ok, y = predicted, color = text_type)) +
+  geom_line() +
+  labs(
+    title = "Interaction between Text Type and Total OK",
+    x = "Total OK",
+    y = "Predicted Average Subjective Knowledge at Time 3"
+  ) +
+  theme_minimal() +
+  facet_wrap(~ pilot) # Separate plots for each level of pilot, if desired
+
+```
+
 
 ---
 
 # Discussion of SK Scale. 
 
-As I said before, I believe the stimuli are not working as predicted. 
+Just like before, I believe the stimuli are not working as predicted. 
 Presenting participants with explanatory text, regardless of the type of text, seems to increase participants' perceived understanding of how metabolism work. 
 
 When you think about it, this makes sense. 
@@ -643,32 +760,4 @@ When you think about it, this makes sense.
 Participants have no reason to feel their SK threatened in any way because their knowledge has not been tested yet. They probably think they know more since they have just acquired additional information. This effect is shown in the significant differences in SK between T1 and T2. Also, and perhaps more importantly, the difference between T2 and T3 is also significant, but in the opposite direction, meaning that after participants were asked to answer the Objective Knowledge Scale, their perceived understanding suffered. 
 
 Finally, when the information is presented as an extended apt metaphor, it appears to have a more significant effect on SK than when presented with a non-apt extended metaphor. This effect is mild, but it could indicate that apt metaphors are better at increasing SK than non-apt metaphors.
-
-# What to do next?
-
-I believe we need to find a better way to shatter the illusion of knowing. Instead of using an Objective Knowledge scale, we could ask participants to explain, in their own words, what they've just read. Doing so will probably be difficult, especially for the literal condition. Therefore, we could expect a higher drop of SK from T2 to T3 in the literal and non-apt metaphors conditions. 
-
----
-
-<div id="disqus_thread"></div>
-<script>
-    /**
-    *  RECOMMENDED CONFIGURATION VARIABLES: EDIT AND UNCOMMENT THE SECTION BELOW TO INSERT DYNAMIC VALUES FROM YOUR PLATFORM OR CMS.
-    *  LEARN WHY DEFINING THESE VARIABLES IS IMPORTANT: https://disqus.com/admin/universalcode/#configuration-variables    */
-    /*
-    var disqus_config = function () {
-    this.page.url = PAGE_URL;  // Replace PAGE_URL with your page's canonical URL variable
-    this.page.identifier = PAGE_IDENTIFIER; // Replace PAGE_IDENTIFIER with your page's unique identifier variable
-    };
-    */
-    (function() { // DON'T EDIT BELOW THIS LINE
-    var d = document, s = d.createElement('script');
-    s.src = 'https://pilot-report.disqus.com/embed.js';
-    s.setAttribute('data-timestamp', +new Date());
-    (d.head || d.body).appendChild(s);
-    })();
-</script>
-<noscript>Please enable JavaScript to view the <a href="https://disqus.com/?ref_noscript">comments powered by Disqus.</a></noscript>
-
-
 
