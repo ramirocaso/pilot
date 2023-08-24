@@ -932,8 +932,21 @@ ggplot(ok_df, aes(x = ave_time, y = total_ok)) +
 
 ```
 
+
+---
+
+## Discussion of OK
+
+Obkective Knowledge did not differ for either the `text_type` or `wta_moment` groups. 
+
+`ave_time` did reach significance, which could be interpreted as the effect of attention on objective knowledge. The more time participants spent in each text paragraph, regardless of which one, the higher the scores in OK. 
+
+Also, it's interesting that an interaction between `text_type` and `wta_moment` almost reached marginal significance (p=0.1013). Looking at the plot, we can see that the interaction points towards a higher score in OK for participants exposed to apt metaphors when OK was measured before WTA. On the contrary, for participants exposed to non-apt metaphors, OK seemed higher when measured after WTA. Again, these are only trends since it didn't reach statistical significance. 
+
+
 # Willigness to Adop
 
+## WTA Descriptives.
 
 ```{r wta summary}
 wta_df <- exp_data_t %>%
@@ -960,6 +973,8 @@ wta_summary %>%
 
 ```
 
+## WTA ANOVA
+
 ```{r wta ANOVA}
 # Run the two-way ANOVA
 anova_wta <- aov(ave_wta ~ text_type * wta_moment + pilot + ave_time, data = wta_df)
@@ -980,4 +995,14 @@ ggplot(wta_summary, aes(x = text_type, y = mean_wta_ok, color = wta_moment, grou
   ylim(0, 5) +  # Set y-axis limits
   theme_minimal()
 ```
-The results indicate that none of the main effects or the interaction are statistically significant at the conventional 0.05 level. The pilot variable shows a trend towards significance, so it might be worth exploring further or considering in the context of the specific study design and subject matter.
+
+---
+
+## Discussion of WTA
+
+The results indicate that none of the main effects or the interaction are statistically significant at the conventional 0.05 level. The pilot variable shows significance, but that's something we are going to correct in the next data collection. 
+
+---
+
+
+
